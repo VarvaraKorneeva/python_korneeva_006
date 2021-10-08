@@ -111,9 +111,11 @@ def post_content(post_id):
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
+    fdb = FlaskDataBase(get_db())
+    url_for('login')
     print(request.method)
     if request.method == 'GET':
-        return render_template('login.html', menu_url=url_menu_items)
+        return render_template('login.html', menu_url=fdb.get_menu())
     elif request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -127,7 +129,7 @@ def login():
 
         print(request)
         print(get_flashed_messages(True))
-        return render_template('login.html', menu_url=url_menu_items)
+        return render_template('login.html', menu_url=fdb.get_menu())
     else:
         raise Exception(f'method {request.method} not allowed')
 

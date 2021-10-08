@@ -10,3 +10,9 @@ CREATE TABLE IF NOT EXISTS posts(
     content TEXT NOT NULL,
     pud_date integer NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS users(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL
+)
