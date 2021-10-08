@@ -57,3 +57,15 @@ class FlaskDataBase:
         except sqlite3.Error as e:
             print(f"Exception in getting post by id {post_id}: {e}")
         return False, False
+
+    def add_user(self, email, password):
+        try:
+            self.__cur.execute(
+                'INSERT INTO users VALUES (NULL, ?, ?)',
+                (email, password)
+            )
+            self.__db.commit()
+        except sqlite3.Error as e:
+            print(f'Error adding user to database: {e}')
+            return False
+        return True

@@ -134,6 +134,30 @@ def login():
         raise Exception(f'method {request.method} not allowed')
 
 
+@app.route('/register', methods=['POST', 'GET'])
+def register():
+    url_for('register')
+    fdb = FlaskDataBase(get_db())
+    if request.method == 'GET':
+        return render_template('register.html', menu_url=fdb.get_menu())
+    elif request.method == 'POST':
+        # print(request)
+        email = request.form.get('email')
+        print(email)
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
+
+        if password == password2:
+            fdb.add_user(email, password)
+            flash('Registration successful', category='success')
+        else:
+            flash('Пароли не совпадают', category='validation_error')
+
+        print(get_flashed_messages(True))
+
+    return render_template('register.html', menu_url=fdb.get_menu())
+
+
 @app.errorhandler(404)
 def page_not_found(error):
     return '<h1>This post does not exists</h1>'
