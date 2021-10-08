@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% block header %}
+    <h1>Main page</h1>
+{% endblock %}
+
+{% for m in menu_url %}
+    <a href="{{ m.url }}">{{ m.title }}</a>
+{% endfor %}
+
+<!--<a href="{{ url_for('profile', username='vara') }}">User Vara</a>-->
+
+<!--<a href="{{url_for('index')}}">Главная страница</a>-->
+
+{% block content %}
+{% endblock %}
+
+</body>
+</html>

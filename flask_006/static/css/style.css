@@ -1,0 +1,26 @@
+.validation_error {
+    color: #ff0044;
+}
+
+.unfilled_error{
+    color: #ff7805;
+}
+
+.error {
+    margin-top: 20px;
+    background-color: rgba(224, 44, 44, 0.29);
+}
+
+.success {
+    margin-top: 20px;
+    background-color: #2aff3c;
+}
+
+.post {
+
+}
+
+.post-link {
+    text-decoration: none;
+    color: black;
+}
