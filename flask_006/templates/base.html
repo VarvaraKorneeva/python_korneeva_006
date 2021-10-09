@@ -21,5 +21,12 @@
 {% block content %}
 {% endblock %}
 
+<script>
+    document.cookie = 'ex=1;';
+    if (!document.cookie) {
+        alert('Необходимо включить cookies')
+    }
+</script>
+
 </body>
 </html>

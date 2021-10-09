@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS posts(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL UNIQUE,
     content TEXT NOT NULL,
-    pud_date integer NOT NULL
+    pud_date integer NOT NULL,
+    photo BLOB DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS users(
