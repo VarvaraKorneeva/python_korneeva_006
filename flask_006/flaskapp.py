@@ -7,7 +7,7 @@ from flask import Flask, render_template, url_for, request, flash, get_flashed_m
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_006.flask_database import FlaskDataBase
-from flask_006.helpers import check_ext
+from flask_006.helpers import check_ext, valid_email, password_complexity
 
 DATABASE = 'flaskapp.db'
 DEBUG = True
@@ -49,6 +49,7 @@ url_menu_items = {
 }
 
 fdb = None
+user = None
 
 
 # @app.before_first_request
@@ -59,7 +60,9 @@ fdb = None
 @app.before_request
 def before_request_func():
     global fdb
+    global user
     fdb = FlaskDataBase(get_db())
+    user = session.get('email', None)
 
 
 # @app.after_request
@@ -76,29 +79,32 @@ def before_request_func():
 
 @app.route('/')
 def index():
-    return render_template('index.html',
-                           menu_url=fdb.get_menu(),
-                           posts=fdb.get_posts()
-                           )
+    if user:
+        return render_template('index.html',
+                               menu_url=fdb.get_menu(),
+                               posts=fdb.get_posts(),
+                               user=user
+                               )
+    else:
+        flash('Авторизуйтесь, чтобы зайти на страницу', 'error')
+        return redirect(url_for('login'))
 
 
 @app.route('/second')
 def second():
-    menu_items = [
-        'Главная',
-        'Каталог',
-        'Доставка',
-        'О нас'
-    ]
+    if user:
+        print(url_for('second'))
 
-    print(url_for('second'))
-
-    return render_template('second.html',
-                           phone="+79542132454",
-                           email='user@mail.ru',
-                           current_date=datetime.date.today().strftime('%d.%m.%y'),
-                           menu_url=fdb.get_menu()
-                           )
+        return render_template('second.html',
+                               phone="+79542132454",
+                               email='user@mail.ru',
+                               current_date=datetime.date.today().strftime('%d.%m.%y'),
+                               menu_url=fdb.get_menu(),
+                               user=user
+                               )
+    else:
+        flash('Авторизуйтесь, чтобы зайти на страницу', 'error')
+        return redirect(url_for('login'))
 
 
 # int, float, path
@@ -111,7 +117,6 @@ def profile(username):
 
 @app.route('/add_post', methods=['GET', 'POST'])
 def add_post():
-    user = session.get('email', None)
     if user:
         if request.method == 'POST':
             name = request.form['name']
@@ -131,7 +136,7 @@ def add_post():
                     flash('Success', category='success')
             else:
                 flash('Post name or content too small', category='error')
-        return render_template('add_post.html', menu_url=fdb.get_menu())
+        return render_template('add_post.html', menu_url=fdb.get_menu(), user=user)
     else:
         flash('Авторизуйтесь, чтобы зайти на страницу', 'error')
         return redirect(url_for('login'))
@@ -139,21 +144,28 @@ def add_post():
 
 @app.route('/post/<int:post_id>')
 def post_content(post_id):
-    fdb = FlaskDataBase(get_db())
-    title, content = fdb.get_post_content(post_id)
-    if not title:
-        abort(404)
+    if user:
+        title, content = fdb.get_post_content(post_id)
+        if not title:
+            abort(404)
 
-    return render_template('post.html', menu_url=fdb.get_menu(), title=title, content=content)
+        return render_template('post.html', menu_url=fdb.get_menu(), title=title, content=content, user=user)
+    else:
+        flash('Авторизуйтесь, чтобы зайти на страницу', 'error')
+        return redirect(url_for('login'))
 
 
 @app.route('/post/<int:post_id>')
 def post_photo(post_id):
-    photo = fdb.get_post_photo(post_id)
-    response = make_response(photo)
-    response.headers['Content-type'] = 'image/'
+    if user:
+        photo = fdb.get_post_photo(post_id)
+        response = make_response(photo)
+        response.headers['Content-type'] = 'image/'
 
-    return response
+        return response
+    else:
+        flash('Авторизуйтесь, чтобы зайти на страницу', 'error')
+        return redirect(url_for('login'))
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -164,23 +176,18 @@ def login():
     elif request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        # hash = generate_password_hash(password)
-        if not email:
-            flash('Email не указан', category='unfilled_error')
-        else:
-            if '@' not in email or '.' not in email:
-                flash('Некоректный email', category='validation_error')
         if not password:
             flash('пароль не указан', category='unfilled_error')
 
-        res = fdb.find_email(email)
-        if not res:
-            flash('Email или пароль неверный', 'error')
-        elif check_password_hash(res['password'], password):
-            session['email'] = email
-            return redirect(url_for('index'))
-        else:
-            flash('Email или пароль неверный', 'error')
+        if valid_email(email):
+            res = fdb.find_email(email)
+            if not res:
+                flash('Email или пароль неверный', 'error')
+            elif check_password_hash(res['password'], password):
+                session['email'] = email
+                return redirect(url_for('index'))
+            else:
+                flash('Email или пароль неверный', 'error')
 
         return render_template('login.html', menu_url=fdb.get_menu())
     else:
@@ -199,18 +206,25 @@ def register():
     if request.method == 'GET':
         return render_template('register.html', menu_url=fdb.get_menu())
     elif request.method == 'POST':
-        # print(request)
         email = request.form.get('email')
-        print(email)
         password = request.form.get('password')
         password2 = request.form.get('password2')
 
-        if password == password2:
-            hash = generate_password_hash(password)
-            fdb.add_user(email, hash)
-            flash('Registration successful', category='success')
-        else:
-            flash('Пароли не совпадают', category='validation_error')
+        if not password or not password2:
+            flash('пароль не указан', category='unfilled_error')
+
+        if valid_email(email):
+            if fdb.find_email(email):
+                flash('Пользователь уже существует', 'error')
+
+            elif password == password2:
+                if password_complexity(password):
+                    hash = generate_password_hash(password)
+                    fdb.add_user(email, hash)
+                    flash('Registration successful', category='success')
+                    return redirect(url_for('login'))
+            else:
+                flash('Пароли не совпадают', category='validation_error')
 
         print(get_flashed_messages(True))
 

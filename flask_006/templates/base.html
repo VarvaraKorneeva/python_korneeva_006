@@ -14,6 +14,13 @@
     <a href="{{ m.url }}">{{ m.title }}</a>
 {% endfor %}
 
+{% if user %}
+<p>
+<form action="{{ url_for('logout') }}">
+    <input type="submit" value="Logout">
+</form>
+</p>
+{% endif %}
 <!--<a href="{{ url_for('profile', username='vara') }}">User Vara</a>-->
 
 <!--<a href="{{url_for('index')}}">Главная страница</a>-->

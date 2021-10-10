@@ -5,6 +5,11 @@
 {% endblock %}
 
 {% block content %}
+
+{% for cat, message in get_flashed_messages(True) %}
+<div class="flash {{ cat }}">{{ message }}</div>
+{% endfor %}
+
 {% for p in posts %}
 <a class="post-link" href="{{ url_for('post_content', post_id=p.id) }}">
 <div class="post">
