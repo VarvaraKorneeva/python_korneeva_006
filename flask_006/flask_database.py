@@ -87,3 +87,15 @@ class FlaskDataBase:
         except sqlite3.Error as e:
             print(f"Exception in getting post by id {post_id}: {e}")
         return False
+
+    def find_email(self, user_email):
+        try:
+            self.__cur.execute(
+                f"SELECT * FROM users WHERE email = '{user_email}'"
+            )
+            res = self.__cur.fetchone()
+            if res:
+                return res
+        except sqlite3.Error as e:
+            print(f"Exception in getting user by email {user_email}: {e}")
+        return False

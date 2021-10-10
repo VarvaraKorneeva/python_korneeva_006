@@ -3,7 +3,8 @@ import os
 import sqlite3
 
 from flask import Flask, render_template, url_for, request, flash, get_flashed_messages, g, abort, make_response, \
-    session
+    session, redirect
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_006.flask_database import FlaskDataBase
 from flask_006.helpers import check_ext
@@ -50,28 +51,27 @@ url_menu_items = {
 fdb = None
 
 
-@app.before_first_request
-def before_first_request_func():
-    print('BEFORE_FIRST_REQUEST')
+# @app.before_first_request
+# def before_first_request_func():
+#     print('BEFORE_FIRST_REQUEST')
 
 
 @app.before_request
 def before_request_func():
     global fdb
     fdb = FlaskDataBase(get_db())
-    print('BEFORE_REQUEST')
 
 
-@app.after_request
-def after_request_func(response):
-    print('AFTER_REQUEST')
-    return response
+# @app.after_request
+# def after_request_func(response):
+#     print('AFTER_REQUEST')
+#     return response
 
 
-@app.teardown_request
-def teardown_request_func(response):
-    print('TEARDOWN_REQUEST')
-    return response
+# @app.teardown_request
+# def teardown_request_func(response):
+#     print('TEARDOWN_REQUEST')
+#     return response
 
 
 @app.route('/')
@@ -82,7 +82,7 @@ def index():
                            )
 
 
-@app.route('/page2')
+@app.route('/second')
 def second():
     menu_items = [
         'Главная',
@@ -111,27 +111,30 @@ def profile(username):
 
 @app.route('/add_post', methods=['GET', 'POST'])
 def add_post():
-    fdb = FlaskDataBase(get_db())
-    if request.method == 'POST':
-        name = request.form['name']
-        post_content = request.form['post']
-        file = request.files.get('photo')
-        if len(name) > 5 and len(post_content) > 10:
-            if file and check_ext(file.filename):
-                try:
-                    img = file.read()
-                except FileNotFoundError:
-                    flash('Ошибка чтения файла', 'error')
-                    img = None
-            res = fdb.add_post(name, post_content, img)
-            if not res:
-                flash('Post were not added. Unexpected error', category='error')
+    user = session.get('email', None)
+    if user:
+        if request.method == 'POST':
+            name = request.form['name']
+            post_content = request.form['post']
+            file = request.files.get('photo')
+            if len(name) > 5 and len(post_content) > 10:
+                if file and check_ext(file.filename):
+                    try:
+                        img = file.read()
+                    except FileNotFoundError:
+                        flash('Ошибка чтения файла', 'error')
+                        img = None
+                res = fdb.add_post(name, post_content, img)
+                if not res:
+                    flash('Post were not added. Unexpected error', category='error')
+                else:
+                    flash('Success', category='success')
             else:
-                flash('Success', category='success')
-        else:
-            flash('Post name or content too small', category='error')
-
-    return render_template('add_post.html', menu_url=fdb.get_menu())
+                flash('Post name or content too small', category='error')
+        return render_template('add_post.html', menu_url=fdb.get_menu())
+    else:
+        flash('Авторизуйтесь, чтобы зайти на страницу', 'error')
+        return redirect(url_for('login'))
 
 
 @app.route('/post/<int:post_id>')
@@ -155,14 +158,13 @@ def post_photo(post_id):
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
-    fdb = FlaskDataBase(get_db())
     url_for('login')
-    print(request.method)
     if request.method == 'GET':
         return render_template('login.html', menu_url=fdb.get_menu())
     elif request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        # hash = generate_password_hash(password)
         if not email:
             flash('Email не указан', category='unfilled_error')
         else:
@@ -171,17 +173,29 @@ def login():
         if not password:
             flash('пароль не указан', category='unfilled_error')
 
-        print(request)
-        print(get_flashed_messages(True))
+        res = fdb.find_email(email)
+        if not res:
+            flash('Email или пароль неверный', 'error')
+        elif check_password_hash(res['password'], password):
+            session['email'] = email
+            return redirect(url_for('index'))
+        else:
+            flash('Email или пароль неверный', 'error')
+
         return render_template('login.html', menu_url=fdb.get_menu())
     else:
         raise Exception(f'method {request.method} not allowed')
 
 
+@app.route('/logout')
+def logout():
+    session['email'] = None
+    return redirect(url_for('login'))
+
+
 @app.route('/register', methods=['POST', 'GET'])
 def register():
     url_for('register')
-    fdb = FlaskDataBase(get_db())
     if request.method == 'GET':
         return render_template('register.html', menu_url=fdb.get_menu())
     elif request.method == 'POST':
@@ -192,7 +206,8 @@ def register():
         password2 = request.form.get('password2')
 
         if password == password2:
-            fdb.add_user(email, password)
+            hash = generate_password_hash(password)
+            fdb.add_user(email, hash)
             flash('Registration successful', category='success')
         else:
             flash('Пароли не совпадают', category='validation_error')
