@@ -4,10 +4,14 @@ import sqlite3
 
 from flask import Flask, render_template, url_for, request, flash, get_flashed_messages, g, abort, make_response, \
     session, redirect
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from flask_006.admin.admin import admin
 from flask_006.flask_database import FlaskDataBase
 from flask_006.helpers import check_ext, valid_email, password_complexity
+from flask_006.models import db
 
 DATABASE = 'flaskapp.db'
 DEBUG = True
@@ -20,14 +24,22 @@ app.config.update(dict(DATABASE=os.path.join(app.root_path, 'flaskapp.db')))
 
 app.permanent_session_lifetime = datetime.timedelta(days=1)
 
+app.register_blueprint(admin, url_pefix='/admin')
+
+app.config['SQLALCHEMY_DATABASE_URL'] = 'sqlite:///flaskapp.db'
+
+
+db.init_app(app)
+migrate = Migrate(app, db)
+
 
 def create_db():
     """Creates new database from sql file."""
-    db = connect_db()
+    db_raw = connect_db()
     with app.open_resource('db_schema.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
-    db.commit()
-    db.close()
+        db_raw.cursor().executescript(f.read())
+    db_raw.commit()
+    db_raw.close()
 
 
 def connect_db():
@@ -49,6 +61,8 @@ url_menu_items = {
 }
 
 fdb = None
+db_raw = None
+# app_db = SQLAlchemy(app)
 user = None
 
 
@@ -60,8 +74,10 @@ user = None
 @app.before_request
 def before_request_func():
     global fdb
+    global db_raw
     global user
-    fdb = FlaskDataBase(get_db())
+    db_raw = get_db()
+    fdb = FlaskDataBase(db_raw)
     user = session.get('email', None)
 
 
@@ -241,6 +257,18 @@ def close_db(error):
     """Close database connection if it exists"""
     if hasattr(g, 'link_db'):
         g.link_db.close()
+
+
+@app.route('/ajax', methods=['POST', 'GET'])
+def ajax_example():
+    number_value = request.args.get('number', 0) or 0
+    number = int(number_value)
+    return f'{number + 1}'
+
+
+@app.route('/ajax_items', methods=['POST'])
+def complex_ajax():
+    items = {}
 
 
 @app.route('/test_response')

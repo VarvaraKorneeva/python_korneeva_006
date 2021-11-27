@@ -20,6 +20,65 @@
 {% endfor %}
 <hr>
 <input type="number" name="number" id="number">
-<button>Send AJAX</button>
+<button onclick="sendRequest()">Send AJAX</button>
+<hr>
+<input type="number2" name="number2" id="number2">
+<button onclick="sendRequestPost()">Send AJAX</button>
+<hr>
+<button onmouseover="hoverPost()">button</button>
+
+<script>
+    const value = $('#number').value;
+
+    sendRequest = function (){
+        $.ajax({
+            url: '/ajax',
+            data: 'number=' + $('#number').val(),
+            success: function (response){
+                console.log(response)
+                $('#number').val(response)
+
+            },
+            error: function (response){
+                console.log('error: ')
+                console.log(response)
+            }
+        })
+    }
+
+    sendRequestPost = function (){
+        $.ajax({
+            url: '/ajax',
+            type: 'Post',
+            data: 'number=' + $('#number').val(),
+            success: function (response){
+                console.log(response)
+                $('#number').val(response)
+
+            },
+            error: function (response){
+                console.log('error: ')
+                console.log(response)
+            }
+        })
+    }
+    $('#number').focusout(sendRequest)
+
+    hoverPost = function (){
+        $.ajax({
+            url: '/ajax_items',
+            type: 'Post',
+            data: {},
+            success: function (response){
+                console.log(response)
+
+            },
+            error: function (response){
+                console.log('error: ')
+                console.log(response)
+            }
+        })
+    }
+</script>
 
 {% endblock %}
